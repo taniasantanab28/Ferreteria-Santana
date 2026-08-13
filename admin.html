@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel de Administración | Ferretería Santana</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="styles.css?v=20260812">
+</head>
+<body>
+
+<div class="admin-shell">
+
+  <!-- LOGIN GATE -->
+  <div class="admin-lock" data-admin-lock>
+    <div class="admin-lock-card">
+      <span class="brand-mark" style="margin:0 auto;display:flex;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13a3 3 0 0 1 3 3v0a3 3 0 0 1-3 3H7"/><circle cx="4" cy="8" r="2"/><circle cx="7" cy="14" r="2"/></svg>
+      </span>
+      <h1>Panel de Administración</h1>
+      <p>Acceso solo para el equipo de Ferretería Santana.</p>
+      <form data-admin-login>
+        <div class="form-field" style="text-align:left;">
+          <label for="admin-pass">Contraseña</label>
+          <input id="admin-pass" type="password" autocomplete="current-password" required>
+        </div>
+        <button class="btn btn-primary btn-block" type="submit">Entrar</button>
+        <p class="admin-error" data-admin-error></p>
+      </form>
+    </div>
+  </div>
+
+  <!-- ADMIN APP (hidden until unlocked) -->
+  <div data-admin-app style="display:none;">
+    <header class="admin-header">
+      <div class="container">
+        <div class="brand">
+          <span class="brand-mark">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13a3 3 0 0 1 3 3v0a3 3 0 0 1-3 3H7"/><circle cx="4" cy="8" r="2"/><circle cx="7" cy="14" r="2"/></svg>
+          </span>
+          <span>Ferretería Santana <small>Panel de productos</small></span>
+        </div>
+        <div style="display:flex;gap:.7rem;align-items:center;">
+          <a class="btn btn-ghost btn-sm" href="tienda.html" target="_blank" rel="noopener">Ver tienda ↗</a>
+          <button class="btn btn-ghost btn-sm" data-admin-logout type="button">Salir</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="admin-main">
+      <div class="container admin-grid">
+
+        <div>
+          <div class="panel">
+            <h2 data-form-title>Agregar producto</h2>
+            <form data-product-form>
+              <input type="hidden" data-field="id">
+              <div class="form-field">
+                <label for="f-name">Nombre del producto</label>
+                <input id="f-name" data-field="name" type="text" required>
+              </div>
+              <div class="field-row-2">
+                <div class="form-field">
+                  <label for="f-category">Categoría</label>
+                  <select id="f-category" data-field="category" required></select>
+                </div>
+                <div class="form-field">
+                  <label for="f-icon">Ícono</label>
+                  <select id="f-icon" data-field="icon"></select>
+                </div>
+              </div>
+              <div class="field-row-2">
+                <div class="form-field">
+                  <label for="f-price">Precio (opcional)</label>
+                  <input id="f-price" data-field="price" type="text" placeholder="Ej. 150.00">
+                </div>
+                <div class="form-field">
+                  <label for="f-unit">Unidad</label>
+                  <input id="f-unit" data-field="unit" type="text" placeholder="Ej. pieza, tramo 6m">
+                </div>
+              </div>
+              <div class="form-field">
+                <label for="f-desc">Descripción breve</label>
+                <textarea id="f-desc" data-field="desc" rows="3"></textarea>
+              </div>
+              <div style="display:flex;gap:.6rem;">
+                <button class="btn btn-primary btn-block" type="submit" data-submit-label>Agregar producto</button>
+                <button class="btn btn-ghost" type="button" data-cancel-edit style="display:none;">Cancelar</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="panel" style="margin-top:1.4rem;">
+            <h2>Guardar cambios permanentes</h2>
+            <p class="panel-note">Los cambios se guardan automáticamente en este navegador (localStorage), así que ya los ves reflejados en la tienda desde aquí. Para que <strong>todos los visitantes</strong> los vean en GitHub, descarga el archivo actualizado y reemplázalo en tu repositorio.</p>
+            <button class="btn btn-accent btn-block" data-export-btn type="button">Descargar products-data.js actualizado</button>
+            <p class="status-line" data-export-status></p>
+            <div class="divider"></div>
+            <button class="btn btn-ghost btn-block" data-reset-btn type="button">Restablecer catálogo original</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>Productos (<span data-product-count>0</span>)</h2>
+          <div class="product-toolbar" style="margin-bottom:1rem;">
+            <div class="chip-row" data-admin-chips></div>
+            <div class="search-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+              <input class="search-input" type="search" placeholder="Buscar…" data-admin-search>
+            </div>
+          </div>
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Nombre</th>
+                  <th>Categoría</th>
+                  <th>Precio</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody data-product-table></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+</div>
+
+<script defer src="lib/manifest.js"></script>
+<script defer src="lib/products-data.js"></script>
+<script defer src="main.js?v=20260812"></script>
+<script defer src="admin.js?v=20260812"></script>
+</body>
+</html>
