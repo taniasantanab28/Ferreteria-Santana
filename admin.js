@@ -1,349 +1,329 @@
-(function() {
+(function () {
   "use strict";
 
+  // ⚠️ Cambia esta contraseña por una propia antes de publicar el sitio.
+  // Este es un panel para un sitio 100% estático (sin servidor), así que
+  // esta contraseña vive en el código del navegador: sirve para evitar que
+  // un visitante casual toque el catálogo, pero NO es seguridad real.
+  // No la uses para datos sensibles.
   var ADMIN_PASSWORD = "santana2026";
   var SESSION_KEY = "santana_admin_session";
   var STORAGE_KEY = "santana_products_v1";
 
-  function $(selector) { return document.querySelector(selector); }
-  function $$(selector) { return Array.from(document.querySelectorAll(selector)); }
+  var $ = function (sel, scope) { return (scope || document).querySelector(sel); };
+  var $$ = function (sel, scope) { return Array.from((scope || document).querySelectorAll(sel)); };
+  function safe(fn, name) { try { fn(); } catch (e) { console.warn("[" + name + "]", e); } }
 
-  // ===== LOGIN =====
+  var brand = window.__BRAND__ || {};
+  var site = window.__SITE__ || {};
+  var escHTML = site.escHTML || function (s) { return s; };
+  var icon = site.icon || function () { return ""; };
+  var categoryName = site.categoryName || function (id) { return id; };
+
+  var editingId = null;
+
+  function getProducts() {
+    try {
+      var raw = window.localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        var stored = JSON.parse(raw);
+        if (Array.isArray(stored)) return stored;
+      }
+    } catch (e) { /* ignore */ }
+    return (window.__PRODUCTS__ || []).slice();
+  }
+
+  function saveProducts(list) {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+      return true;
+    } catch (e) {
+      console.warn("No se pudo guardar en localStorage", e);
+      return false;
+    }
+  }
+
+  function nextId(list) {
+    var max = 0;
+    list.forEach(function (p) {
+      var n = parseInt(String(p.id || "").replace(/\D/g, ""), 10);
+      if (!isNaN(n) && n > max) max = n;
+    });
+    return "p-" + String(max + 1).padStart(4, "0");
+  }
+
+  /* -----------------------------------------------------------
+     Auth
+  ----------------------------------------------------------- */
   function initAuth() {
-    var lock = $('[data-admin-lock]');
-    var app = $('[data-admin-app]');
-    var form = $('[data-admin-login]');
-    var errorEl = $('[data-admin-error]');
-    var logoutBtn = $('[data-admin-logout]');
+    var lock = $("[data-admin-lock]");
+    var app = $("[data-admin-app]");
+    var form = $("[data-admin-login]");
+    var errorEl = $("[data-admin-error]");
+    var logoutBtn = $("[data-admin-logout]");
 
     function unlock() {
-      lock.style.display = 'none';
-      app.style.display = 'block';
+      lock.style.display = "none";
+      app.style.display = "block";
       initApp();
     }
 
-    // Verificar sesión guardada
-    try {
-      if (sessionStorage.getItem(SESSION_KEY) === '1') {
-        unlock();
-        return;
-      }
-    } catch(e) {}
+    var isUnlocked = false;
+    try { isUnlocked = window.sessionStorage.getItem(SESSION_KEY) === "1"; } catch (e) { /* ignore */ }
+    if (isUnlocked) { unlock(); return; }
 
-    form.addEventListener('submit', function(e) {
+    form.addEventListener("submit", function (e) {
       e.preventDefault();
-      var password = document.getElementById('admin-pass').value;
-      
-      if (password === ADMIN_PASSWORD) {
-        try { sessionStorage.setItem(SESSION_KEY, '1'); } catch(e) {}
-        errorEl.textContent = '';
+      var val = $("#admin-pass", form).value;
+      if (val === ADMIN_PASSWORD) {
+        try { window.sessionStorage.setItem(SESSION_KEY, "1"); } catch (err) { /* ignore */ }
+        errorEl.textContent = "";
         unlock();
       } else {
-        errorEl.textContent = '❌ Contraseña incorrecta';
-        document.getElementById('admin-pass').value = '';
-        document.getElementById('admin-pass').focus();
+        errorEl.textContent = "Contraseña incorrecta. Intenta de nuevo.";
       }
     });
 
     if (logoutBtn) {
-      logoutBtn.addEventListener('click', function() {
-        try { sessionStorage.removeItem(SESSION_KEY); } catch(e) {}
+      logoutBtn.addEventListener("click", function () {
+        try { window.sessionStorage.removeItem(SESSION_KEY); } catch (e) { /* ignore */ }
         location.reload();
       });
     }
   }
 
-  // ===== APP =====
+  /* -----------------------------------------------------------
+     App (once unlocked)
+  ----------------------------------------------------------- */
+  var appInitialized = false;
   function initApp() {
-    renderProducts(getProducts());
+    if (appInitialized) return;
+    appInitialized = true;
+
+    populateSelects();
     renderChips();
-    setupForm();
-    setupFilters();
-    setupExport();
-    setupReset();
+    renderTable();
+    bindForm();
+    bindExport();
+    bindReset();
+    bindFilters();
   }
 
-  // ===== PRODUCTOS =====
-  function getProducts() {
-    try {
-      var stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        var parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length) return parsed;
-      }
-    } catch(e) {}
-    return window.__PRODUCTS__ || [];
+  function populateSelects() {
+    var catSelect = $("#f-category");
+    var iconSelect = $("#f-icon");
+    if (catSelect) {
+      catSelect.innerHTML = (brand.categories || []).map(function (c) {
+        return '<option value="' + escHTML(c.id) + '">' + escHTML(c.name) + "</option>";
+      }).join("");
+    }
+    var iconNames = ["pipe", "sprinkler", "valve", "faucet", "wrench", "bolt", "elbow", "drain", "hose", "timer", "tee", "tank", "boxes"];
+    if (iconSelect) {
+      iconSelect.innerHTML = iconNames.map(function (n) {
+        return '<option value="' + n + '">' + n + "</option>";
+      }).join("");
+    }
   }
 
-  function saveProducts(products) {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
-      return true;
-    } catch(e) { return false; }
+  function renderChips() {
+    var target = $("[data-admin-chips]");
+    if (!target) return;
+    var html = '<button class="chip is-active" data-chip="all" type="button">Todos</button>';
+    html += (brand.categories || []).map(function (c) {
+      return '<button class="chip" data-chip="' + escHTML(c.id) + '" type="button">' + escHTML(c.name) + "</button>";
+    }).join("");
+    target.innerHTML = html;
   }
 
-  // ===== RENDER =====
-  function renderProducts(products) {
-    var tbody = document.querySelector('[data-product-table]');
-    var count = document.querySelector('[data-product-count]');
+  function currentFilter() {
+    var chips = $("[data-admin-chips]");
+    var active = chips ? chips.querySelector(".chip.is-active") : null;
+    var cat = active ? active.dataset.chip : "all";
+    var search = $("[data-admin-search]");
+    var q = search ? search.value.trim().toLowerCase() : "";
+    return { cat: cat, q: q };
+  }
+
+  function renderTable() {
+    var tbody = $("[data-product-table]");
+    var countEl = $("[data-product-count]");
     if (!tbody) return;
-
-    var search = document.querySelector('[data-admin-search]');
-    var searchTerm = search ? search.value.toLowerCase().trim() : '';
-    
-    var activeChip = document.querySelector('[data-admin-chips] .chip.is-active');
-    var category = activeChip ? activeChip.dataset.chip : 'all';
-    
-    var filtered = products.filter(function(p) {
-      var matchSearch = !searchTerm || 
-        (p.name || '').toLowerCase().includes(searchTerm) ||
-        (p.desc || '').toLowerCase().includes(searchTerm);
-      var matchCategory = category === 'all' || p.category === category;
-      return matchSearch && matchCategory;
+    var list = getProducts();
+    var f = currentFilter();
+    var filtered = list.filter(function (p) {
+      var matchCat = f.cat === "all" || p.category === f.cat;
+      var matchQ = !f.q || (p.name || "").toLowerCase().indexOf(f.q) !== -1;
+      return matchCat && matchQ;
     });
-    
-    if (count) count.textContent = products.length;
-    
-    if (filtered.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:#6b7280;">No hay productos</td></tr>';
+    if (countEl) countEl.textContent = list.length;
+    if (!filtered.length) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--ink-mute);padding:2rem 0;">Sin productos que coincidan.</td></tr>';
       return;
     }
-    
-    var html = '';
-    filtered.forEach(function(p) {
-      var iconHtml = p.icon ? getIcon(p.icon) : '📦';
-      var categoryName = getCategoryName(p.category);
-      var priceHtml = p.price ? '$' + p.price : 'Cotizar';
-      
-      html += `
-        <tr>
-          <td style="font-size:1.3rem;">${iconHtml}</td>
-          <td><strong>${p.name}</strong></td>
-          <td><span style="background:${getCategoryColor(p.category)};color:white;padding:2px 10px;border-radius:12px;font-size:0.75rem;">${categoryName}</span></td>
-          <td>${priceHtml}</td>
-          <td>
-            <button class="btn btn-sm btn-ghost" data-edit="${p.id}">✏️</button>
-            <button class="btn btn-sm btn-ghost" data-delete="${p.id}" style="color:#ef4444;">🗑️</button>
-          </td>
-        </tr>
-      `;
+    tbody.innerHTML = filtered.map(function (p) {
+      var price = p.price ? ("$" + escHTML(p.price)) : '<span style="color:var(--ink-mute)">Cotizar</span>';
+      return (
+        "<tr>" +
+          '<td><div class="p-thumb">' + icon(p.icon) + "</div></td>" +
+          "<td><strong>" + escHTML(p.name) + '</strong><br><span style="color:var(--ink-mute);font-size:.78rem;">' + escHTML(p.unit || "") + "</span></td>" +
+          '<td><span class="badge-tag">' + escHTML(categoryName(p.category)) + "</span></td>" +
+          "<td>" + price + "</td>" +
+          '<td><div class="row-actions">' +
+            '<button class="icon-btn" data-edit="' + escHTML(p.id) + '" type="button" aria-label="Editar">' + editIconSvg() + "</button>" +
+            '<button class="icon-btn danger" data-delete="' + escHTML(p.id) + '" type="button" aria-label="Eliminar">' + trashIconSvg() + "</button>" +
+          "</div></td>" +
+        "</tr>"
+      );
+    }).join("");
+
+    $$("[data-edit]", tbody).forEach(function (btn) {
+      btn.addEventListener("click", function () { startEdit(btn.dataset.edit); });
     });
-    
-    tbody.innerHTML = html;
-    
-    document.querySelectorAll('[data-edit]').forEach(function(btn) {
-      btn.addEventListener('click', function() { editProduct(this.dataset.edit); });
-    });
-    document.querySelectorAll('[data-delete]').forEach(function(btn) {
-      btn.addEventListener('click', function() { deleteProduct(this.dataset.delete); });
+    $$("[data-delete]", tbody).forEach(function (btn) {
+      btn.addEventListener("click", function () { deleteProduct(btn.dataset.delete); });
     });
   }
 
-  // ===== CATEGORÍAS =====
-  function getCategoryName(id) {
-    var map = {
-      'ELECTRICOS': 'Eléctricos',
-      'PLOMERIA': 'Plomería',
-      'PINTURA': 'Pintura',
-      'HERRAMIENTA': 'Herramienta',
-      'JARDINERIA': 'Jardinería',
-      'CERRAJERIA': 'Cerrajería',
-      'SEGURIDAD': 'Seguridad',
-      'ILUMINACION': 'Iluminación',
-      'FERRETERIA': 'Ferretería general'
-    };
-    return map[id] || id || 'General';
+  function editIconSvg() {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+  }
+  function trashIconSvg() {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>';
   }
 
-  function getCategoryColor(category) {
-    var colors = {
-      'ELECTRICOS': '#f59e0b',
-      'PLOMERIA': '#3b82f6',
-      'PINTURA': '#8b5cf6',
-      'HERRAMIENTA': '#ef4444',
-      'JARDINERIA': '#22c55e',
-      'CERRAJERIA': '#f97316',
-      'SEGURIDAD': '#6366f1',
-      'ILUMINACION': '#0ea5e9',
-      'FERRETERIA': '#6b7280'
-    };
-    return colors[category] || '#6b7280';
-  }
-
-  function getIcon(name) {
-    var icons = {
-      'toolbox': '🧰',
-      'light': '💡',
-      'paint': '🎨',
-      'security': '🛡️',
-      'key': '🔑',
-      'pipe': '🔧',
-      'valve': '⚙️'
-    };
-    return icons[name] || '📦';
-  }
-
-  // ===== CHIPS =====
-  function renderChips() {
-    var container = document.querySelector('[data-admin-chips]');
-    if (!container) return;
-    
-    var products = getProducts();
-    var categories = ['all'];
-    products.forEach(function(p) {
-      if (p.category && !categories.includes(p.category)) {
-        categories.push(p.category);
-      }
-    });
-    
-    var html = '<button class="chip is-active" data-chip="all">Todos</button>';
-    categories.forEach(function(cat) {
-      if (cat === 'all') return;
-      var name = getCategoryName(cat);
-      html += `<button class="chip" data-chip="${cat}">${name}</button>`;
-    });
-    
-    container.innerHTML = html;
-    
-    container.querySelectorAll('.chip').forEach(function(chip) {
-      chip.addEventListener('click', function() {
-        container.querySelectorAll('.chip').forEach(function(c) { c.classList.remove('is-active'); });
-        this.classList.add('is-active');
-        renderProducts(getProducts());
-      });
-    });
-  }
-
-  // ===== FORMULARIO =====
-  var editingId = null;
-
-  function setupForm() {
-    var form = document.querySelector('[data-product-form]');
-    var cancelBtn = document.querySelector('[data-cancel-edit]');
+  /* -----------------------------------------------------------
+     Form: add / edit
+  ----------------------------------------------------------- */
+  function bindForm() {
+    var form = $("[data-product-form]");
+    var cancelBtn = $("[data-cancel-edit]");
     if (!form) return;
-    
-    form.addEventListener('submit', function(e) {
+
+    form.addEventListener("submit", function (e) {
       e.preventDefault();
-      
-      var name = document.getElementById('f-name').value.trim();
-      var category = document.getElementById('f-category').value;
-      var icon = document.getElementById('f-icon').value;
-      var price = document.getElementById('f-price').value.trim();
-      var unit = document.getElementById('f-unit').value.trim();
-      var desc = document.getElementById('f-desc').value.trim();
-      
-      if (!name) { alert('El nombre es obligatorio'); return; }
-      if (!category) { alert('Selecciona una categoría'); return; }
-      
-      var products = getProducts();
-      
+      if (!form.reportValidity()) return;
+      var list = getProducts();
+      var values = {};
+      $$("[data-field]", form).forEach(function (el) { values[el.dataset.field] = el.value.trim(); });
+
       if (editingId) {
-        products = products.map(function(p) {
-          if (p.id === editingId) {
-            return { id: p.id, name: name, category: category, icon: icon, price: price, unit: unit, desc: desc };
-          }
-          return p;
+        list = list.map(function (p) {
+          if (p.id !== editingId) return p;
+          return Object.assign({}, p, values, { id: p.id });
         });
       } else {
-        var newId = 'p-' + String(products.length + 1).padStart(4, '0');
-        products.push({ id: newId, name: name, category: category, icon: icon, price: price, unit: unit, desc: desc });
+        values.id = nextId(list);
+        list.push(values);
       }
-      
-      saveProducts(products);
+      saveProducts(list);
       resetForm();
-      renderProducts(products);
-      renderChips();
+      renderTable();
+      flashStatus("Producto guardado. Ya se ve en la tienda de este navegador.");
     });
-    
-    if (cancelBtn) { cancelBtn.addEventListener('click', resetForm); }
+
+    if (cancelBtn) cancelBtn.addEventListener("click", resetForm);
   }
 
-  function editProduct(id) {
-    var products = getProducts();
-    var product = products.find(function(p) { return p.id === id; });
-    if (!product) return;
-    
+  function startEdit(id) {
+    var list = getProducts();
+    var p = list.find(function (item) { return item.id === id; });
+    if (!p) return;
     editingId = id;
-    document.getElementById('f-name').value = product.name || '';
-    document.getElementById('f-category').value = product.category || '';
-    document.getElementById('f-icon').value = product.icon || '';
-    document.getElementById('f-price').value = product.price || '';
-    document.getElementById('f-unit').value = product.unit || '';
-    document.getElementById('f-desc').value = product.desc || '';
-    
-    document.querySelector('[data-form-title]').textContent = 'Editar producto';
-    document.querySelector('[data-submit-label]').textContent = 'Guardar cambios';
-    document.querySelector('[data-cancel-edit]').style.display = 'inline-flex';
+    var form = $("[data-product-form]");
+    $$("[data-field]", form).forEach(function (el) {
+      el.value = p[el.dataset.field] || "";
+    });
+    $("[data-form-title]").textContent = "Editar producto";
+    $("[data-submit-label]").textContent = "Guardar cambios";
+    $("[data-cancel-edit]").style.display = "inline-flex";
+    form.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   function resetForm() {
     editingId = null;
-    document.querySelector('[data-product-form]').reset();
-    document.querySelector('[data-form-title]').textContent = 'Agregar producto';
-    document.querySelector('[data-submit-label]').textContent = 'Agregar producto';
-    document.querySelector('[data-cancel-edit]').style.display = 'none';
+    var form = $("[data-product-form]");
+    form.reset();
+    $("[data-form-title]").textContent = "Agregar producto";
+    $("[data-submit-label]").textContent = "Agregar producto";
+    $("[data-cancel-edit]").style.display = "none";
   }
 
   function deleteProduct(id) {
-    if (!confirm('¿Eliminar este producto?')) return;
-    var products = getProducts().filter(function(p) { return p.id !== id; });
-    saveProducts(products);
-    renderProducts(products);
-    renderChips();
+    if (!window.confirm("¿Eliminar este producto? Esta acción no se puede deshacer.")) return;
+    var list = getProducts().filter(function (p) { return p.id !== id; });
+    saveProducts(list);
+    renderTable();
+    flashStatus("Producto eliminado.");
   }
 
-  // ===== FILTROS =====
-  function setupFilters() {
-    var search = document.querySelector('[data-admin-search]');
-    if (search) {
-      search.addEventListener('input', function() { renderProducts(getProducts()); });
+  /* -----------------------------------------------------------
+     Filters
+  ----------------------------------------------------------- */
+  function bindFilters() {
+    var chips = $("[data-admin-chips]");
+    var search = $("[data-admin-search]");
+    if (chips) {
+      chips.addEventListener("click", function (e) {
+        var b = e.target.closest(".chip");
+        if (!b) return;
+        $$(".chip", chips).forEach(function (c) { c.classList.remove("is-active"); });
+        b.classList.add("is-active");
+        renderTable();
+      });
     }
+    if (search) search.addEventListener("input", renderTable);
   }
 
-  // ===== EXPORTAR =====
-  function setupExport() {
-    var btn = document.querySelector('[data-export-btn]');
+  /* -----------------------------------------------------------
+     Export updated products-data.js
+  ----------------------------------------------------------- */
+  function bindExport() {
+    var btn = $("[data-export-btn]");
     if (!btn) return;
-    
-    btn.addEventListener('click', function() {
-      var products = getProducts();
-      var content = '(function() {\n  "use strict";\n  window.__PRODUCTS__ = ' + 
-        JSON.stringify(products, null, 2) + ';\n})();';
-      
-      var blob = new Blob([content], { type: 'application/javascript' });
+    btn.addEventListener("click", function () {
+      var list = getProducts();
+      var fileContent =
+        '(function () {\n  "use strict";\n\n  // Catálogo generado desde el panel de administración.\n' +
+        "  // Reemplaza el archivo lib/products-data.js de tu repositorio con este contenido\n" +
+        "  // y súbelo a GitHub para que el cambio se vea en el sitio publicado.\n" +
+        "  window.__PRODUCTS__ = " + JSON.stringify(list, null, 2) + ";\n})();\n";
+
+      var blob = new Blob([fileContent], { type: "text/javascript" });
       var url = URL.createObjectURL(blob);
-      var a = document.createElement('a');
+      var a = document.createElement("a");
       a.href = url;
-      a.download = 'products-data.js';
+      a.download = "products-data.js";
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      
-      var status = document.querySelector('[data-export-status]');
-      if (status) {
-        status.textContent = '✅ Descargado correctamente';
-        status.style.color = '#22c55e';
+      var statusEl = $("[data-export-status]");
+      if (statusEl) {
+        statusEl.textContent = "Descargado. Súbelo a lib/products-data.js en GitHub.";
+        statusEl.classList.add("is-ok");
       }
     });
   }
 
-  // ===== RESET =====
-  function setupReset() {
-    var btn = document.querySelector('[data-reset-btn]');
+  function bindReset() {
+    var btn = $("[data-reset-btn]");
     if (!btn) return;
-    
-    btn.addEventListener('click', function() {
-      if (!confirm('¿Restablecer al catálogo original?')) return;
-      try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
-      renderProducts(getProducts());
-      renderChips();
+    btn.addEventListener("click", function () {
+      if (!window.confirm("Esto borrará los cambios guardados en este navegador y volverá al catálogo original del archivo. ¿Continuar?")) return;
+      try { window.localStorage.removeItem(STORAGE_KEY); } catch (e) { /* ignore */ }
+      renderTable();
+      flashStatus("Catálogo restablecido al original.");
     });
   }
 
-  // ===== INICIAR =====
-  document.addEventListener('DOMContentLoaded', function() {
-    initAuth();
-  });
+  function flashStatus(msg) {
+    var statusEl = $("[data-export-status]");
+    if (!statusEl) return;
+    statusEl.textContent = msg;
+    statusEl.classList.remove("is-ok");
+  }
 
+  document.addEventListener("DOMContentLoaded", function () {
+    safe(initAuth, "initAuth");
+  });
 })();
