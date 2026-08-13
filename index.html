@@ -3,160 +3,162 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ferretería Santana | Tubería, Drenaje y Sistemas de Riego</title>
-<meta name="description" content="Ferretería Santana: más de 40 años surtiendo tubería de drenaje, sistemas de riego, plomería y ferretería en general.">
+<title>Panel de Administración | Ferretería Santana</title>
+<meta name="robots" content="noindex, nofollow">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <link rel="stylesheet" href="styles.css?v=20260812">
-<style>@view-transition{navigation:auto;}</style>
 </head>
 <body>
-<a class="skip-link" href="#main">Saltar al contenido</a>
 
-<header class="nav">
-  <div class="container nav-inner">
-    <a class="brand" href="index.html">
-      <span class="brand-mark">
+<div class="admin-shell">
+
+  <!-- LOGIN GATE -->
+  <div class="admin-lock" data-admin-lock>
+    <div class="admin-lock-card">
+      <span class="brand-mark" style="margin:0 auto;display:flex;">
         <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13a3 3 0 0 1 3 3v0a3 3 0 0 1-3 3H7"/><circle cx="4" cy="8" r="2"/><circle cx="7" cy="14" r="2"/></svg>
       </span>
-      <span><span data-brand-name>Ferretería Santana</span><small>Tubería · Drenaje · Riego</small></span>
-    </a>
-    <nav class="nav-links" data-nav-links aria-label="Navegación principal"></nav>
-    <div class="nav-cta">
-      <a class="btn btn-ghost btn-sm" href="tel:+528710000000">Llamar</a>
-      <a class="btn btn-accent btn-sm" href="contacto.html">Contáctanos</a>
+      <h1>Panel de Administración</h1>
+      <p>Acceso solo para el equipo de Ferretería Santana.</p>
+      <form data-admin-login>
+        <div class="form-field" style="text-align:left;">
+          <label for="admin-pass">Contraseña</label>
+          <input id="admin-pass" type="password" autocomplete="current-password" required>
+        </div>
+        <button class="btn btn-primary btn-block" type="submit">Entrar</button>
+        <p class="admin-error" data-admin-error></p>
+      </form>
     </div>
-    <button class="nav-burger" data-nav-burger aria-label="Abrir menú"><span></span></button>
   </div>
-  <div class="container">
-    <nav class="nav-mobile" data-nav-mobile aria-label="Navegación móvil"></nav>
-  </div>
-</header>
 
-<main id="main">
+  <!-- ADMIN APP (hidden until unlocked) -->
+  <div data-admin-app style="display:none;">
+    <header class="admin-header">
+      <div class="container">
+        <div class="brand">
+          <span class="brand-mark">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13a3 3 0 0 1 3 3v0a3 3 0 0 1-3 3H7"/><circle cx="4" cy="8" r="2"/><circle cx="7" cy="14" r="2"/></svg>
+          </span>
+          <span>Ferretería Santana <small>Panel de productos</small></span>
+        </div>
+        <div style="display:flex;gap:.7rem;align-items:center;">
+          <a class="btn btn-ghost btn-sm" href="tienda.html" target="_blank" rel="noopener">Ver tienda ↗</a>
+          <button class="btn btn-ghost btn-sm" data-admin-logout type="button">Salir</button>
+        </div>
+      </div>
+    </header>
 
-  <section class="hero">
-    <div class="hero-mesh" aria-hidden="true"></div>
-    <div class="container">
-      <div class="hero-grid">
+    <main class="admin-main">
+      <div class="container admin-grid">
+
         <div>
-          <div class="hero-badge"><span class="dot"></span> +40 años sirviendo a la comunidad</div>
-          <h1 class="hero-title">Todo para tu <em>drenaje</em>, riego y obra en un solo lugar</h1>
-          <p class="hero-sub">Tubería sanitaria y pluvial, sistemas de riego, válvulas, plomería y ferretería en general. Asesoría técnica de verdad, no solo venta.</p>
-          <div class="hero-actions">
-            <a class="btn btn-primary" href="tienda.html">Ver tienda <span aria-hidden="true">→</span></a>
-            <a class="btn btn-ghost" href="contacto.html">Contáctanos</a>
+          <div class="panel">
+            <h2 data-form-title>Agregar producto</h2>
+            <form data-product-form>
+              <input type="hidden" data-field="id">
+              <div class="form-field">
+                <label for="f-name">Nombre del producto</label>
+                <input id="f-name" data-field="name" type="text" required>
+              </div>
+              <div class="field-row-2">
+                <div class="form-field">
+                  <label for="f-category">Categoría</label>
+                  <select id="f-category" data-field="category" required>
+                    <option value="">Seleccionar categoría</option>
+                    <option value="ELECTRICOS">Eléctricos</option>
+                    <option value="PLOMERIA">Plomería</option>
+                    <option value="PINTURA">Pintura</option>
+                    <option value="HERRAMIENTA">Herramienta</option>
+                    <option value="JARDINERIA">Jardinería</option>
+                    <option value="CERRAJERIA">Cerrajería</option>
+                    <option value="SEGURIDAD">Seguridad</option>
+                    <option value="ILUMINACION">Iluminación</option>
+                    <option value="FERRETERIA">Ferretería general</option>
+                  </select>
+                </div>
+                <div class="form-field">
+                  <label for="f-icon">Ícono</label>
+                  <select id="f-icon" data-field="icon">
+                    <option value="">Sin ícono</option>
+                    <option value="toolbox">🧰 Herramientas</option>
+                    <option value="light">💡 Iluminación</option>
+                    <option value="paint">🎨 Pintura</option>
+                    <option value="security">🛡️ Seguridad</option>
+                    <option value="key">🔑 Cerrajería</option>
+                    <option value="pipe">🔧 Plomería</option>
+                    <option value="valve">⚙️ Válvulas</option>
+                  </select>
+                </div>
+              </div>
+              <div class="field-row-2">
+                <div class="form-field">
+                  <label for="f-price">Precio (opcional)</label>
+                  <input id="f-price" data-field="price" type="text" placeholder="Ej. 150.00">
+                </div>
+                <div class="form-field">
+                  <label for="f-unit">Unidad</label>
+                  <input id="f-unit" data-field="unit" type="text" placeholder="Ej. pieza, tramo 6m">
+                </div>
+              </div>
+              <div class="form-field">
+                <label for="f-desc">Descripción breve</label>
+                <textarea id="f-desc" data-field="desc" rows="3"></textarea>
+              </div>
+              <div style="display:flex;gap:.6rem;">
+                <button class="btn btn-primary btn-block" type="submit" data-submit-label>Agregar producto</button>
+                <button class="btn btn-ghost" type="button" data-cancel-edit style="display:none;">Cancelar</button>
+              </div>
+            </form>
           </div>
-          <div class="hero-stats" data-hero-stats></div>
-        </div>
-        <div class="hero-visual">
-          <div class="hero-card-grid">
-            <div class="hero-icon-card glass-card" data-tilt>
-              <div class="ico-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13a3 3 0 0 1 3 3v0a3 3 0 0 1-3 3H7"/><circle cx="4" cy="8" r="2"/><circle cx="7" cy="14" r="2"/></svg></div>
-              <h4>Tubería de drenaje</h4>
-              <p>PVC sanitario y pluvial</p>
-            </div>
-            <div class="hero-icon-card glass-card" data-tilt>
-              <div class="ico-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="#06305e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-9"/><path d="M8 13a4 4 0 0 1 8 0"/><path d="M12 2v3"/><path d="M5 6l2 2"/><path d="M19 6l-2 2"/></svg></div>
-              <h4>Sistemas de riego</h4>
-              <p>Aspersores y goteo</p>
-            </div>
-            <div class="hero-icon-card glass-card" data-tilt>
-              <div class="ico-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="#06305e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M4 12h4"/><path d="M16 12h4"/></svg></div>
-              <h4>Válvulas</h4>
-              <p>Esfera, check y más</p>
-            </div>
-            <div class="hero-icon-card glass-card" data-tilt>
-              <div class="ico-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.1 2.1-2-2Z"/></svg></div>
-              <h4>Herramientas</h4>
-              <p>Para tu obra completa</p>
-            </div>
+
+          <div class="panel" style="margin-top:1.4rem;">
+            <h2>Guardar cambios permanentes</h2>
+            <p class="panel-note">Los cambios se guardan automáticamente en este navegador (localStorage), así que ya los ves reflejados en la tienda desde aquí. Para que <strong>todos los visitantes</strong> los vean en GitHub, descarga el archivo actualizado y reemplázalo en tu repositorio.</p>
+            <button class="btn btn-accent btn-block" data-export-btn type="button">Descargar products-data.js actualizado</button>
+            <p class="status-line" data-export-status></p>
+            <div class="divider"></div>
+            <button class="btn btn-ghost btn-block" data-reset-btn type="button">Restablecer catálogo original</button>
           </div>
         </div>
-      </div>
-    </div>
-  </section>
 
-  <section class="section" id="categorias">
-    <div class="container">
-      <div class="section-head reveal">
-        <p class="kicker">Nuestras líneas</p>
-        <h2>Todo lo que necesitas para tu proyecto</h2>
-        <p class="section-sub">Desde tubería de drenaje hasta sistemas de riego completos, con el respaldo de 40 años de experiencia.</p>
-      </div>
-      <div class="cat-grid" data-categories></div>
-    </div>
-  </section>
-
-  <section class="section" style="background:var(--bg-2)" id="destacados">
-    <div class="container">
-      <div class="section-head reveal">
-        <p class="kicker">Catálogo</p>
-        <h2>Productos destacados</h2>
-        <p class="section-sub">Una muestra de nuestro inventario. Visita la tienda completa para ver todo el catálogo por categoría.</p>
-      </div>
-      <div class="product-grid" data-featured></div>
-      <div style="text-align:center;margin-top:2.5rem;">
-        <a class="btn btn-primary" href="tienda.html">Ver catálogo completo →</a>
-      </div>
-    </div>
-  </section>
-
-  <section class="section" id="nosotros">
-    <div class="container">
-      <div class="section-head reveal">
-        <p class="kicker">Por qué Ferretería Santana</p>
-        <h2>Más de 40 años de experiencia trabajando contigo</h2>
-        <p class="section-sub">No solo vendemos material: te ayudamos a resolver el proyecto.</p>
-      </div>
-      <div class="pillar-grid" data-pillars></div>
-    </div>
-  </section>
-
-  <section class="section" style="background:var(--bg-2)">
-    <div class="container">
-      <div class="section-head reveal">
-        <p class="kicker">Testimonios</p>
-        <h2>Lo que dicen nuestros clientes</h2>
-      </div>
-      <div class="testi-grid" data-testimonials></div>
-    </div>
-  </section>
-
-  <section class="section">
-    <div class="container">
-      <div class="cta-band reveal">
-        <div>
-          <h2>¿Listo para tu proyecto?</h2>
-          <p>Escríbenos y te ayudamos a encontrar el material correcto para tu drenaje, riego o instalación.</p>
+        <div class="panel">
+          <h2>Productos (<span data-product-count>0</span>)</h2>
+          <div class="product-toolbar" style="margin-bottom:1rem;">
+            <div class="chip-row" data-admin-chips></div>
+            <div class="search-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+              <input class="search-input" type="search" placeholder="Buscar…" data-admin-search>
+            </div>
+          </div>
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Ícono</th>
+                  <th>Nombre</th>
+                  <th>Categoría</th>
+                  <th>Precio</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody data-product-table></tbody>
+            </table>
+          </div>
         </div>
-        <div class="cta-actions">
-          <a class="btn btn-accent" href="contacto.html">Contáctanos</a>
-          <a class="btn btn-ghost" style="border-color:rgba(255,255,255,0.4);color:#fff" href="tienda.html">Ver tienda</a>
-        </div>
+
       </div>
-    </div>
-  </section>
-
-</main>
-
-<footer class="footer">
-  <div class="container">
-    <div class="footer-grid" data-footer-content></div>
-    <div class="footer-bottom">
-      <span>© <span data-year></span> <span data-brand-name>Ferretería Santana</span>. Todos los derechos reservados.</span>
-      <a href="admin.html" style="color:rgba(255,255,255,0.4)">Admin</a>
-    </div>
+    </main>
   </div>
-</footer>
 
-<div data-wa-float></div>
+</div>
 
 <script defer src="lib/gsap.min.js"></script>
 <script defer src="lib/ScrollTrigger.min.js"></script>
 <script defer src="lib/manifest.js"></script>
 <script defer src="lib/products-data.js"></script>
 <script defer src="main.js?v=20260812"></script>
+<script defer src="admin.js?v=20260812"></script>
 </body>
 </html>
