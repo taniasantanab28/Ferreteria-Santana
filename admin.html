@@ -65,11 +65,34 @@
               <div class="field-row-2">
                 <div class="form-field">
                   <label for="f-category">Categoría</label>
-                  <select id="f-category" data-field="category" required></select>
+                  <select id="f-category" data-field="category" required>
+                    <option value="">Seleccionar categoría</option>
+                    <option value="ELECTRICOS">Eléctricos</option>
+                    <option value="PLOMERIA">Plomería</option>
+                    <option value="PINTURA">Pintura</option>
+                    <option value="HERRAMIENTA">Herramienta</option>
+                    <option value="JARDINERIA">Jardinería</option>
+                    <option value="CERRAJERIA">Cerrajería</option>
+                    <option value="SEGURIDAD">Seguridad</option>
+                    <option value="ILUMINACION">Iluminación</option>
+                    <option value="FERRETERIA">Ferretería general</option>
+                  </select>
                 </div>
                 <div class="form-field">
                   <label for="f-icon">Ícono</label>
-                  <select id="f-icon" data-field="icon"></select>
+                  <select id="f-icon" data-field="icon">
+                    <option value="">Sin ícono</option>
+                    <option value="🔧">🔧 Herramienta</option>
+                    <option value="💡">💡 Iluminación</option>
+                    <option value="🔩">🔩 Tornillos</option>
+                    <option value="🔌">🔌 Eléctrico</option>
+                    <option value="🚿">🚿 Plomería</option>
+                    <option value="🎨">🎨 Pintura</option>
+                    <option value="🌿">🌿 Jardinería</option>
+                    <option value="🔑">🔑 Cerrajería</option>
+                    <option value="🛡️">🛡️ Seguridad</option>
+                    <option value="🧰">🧰 Herramientas</option>
+                  </select>
                 </div>
               </div>
               <div class="field-row-2">
@@ -116,11 +139,11 @@
             <table class="admin-table">
               <thead>
                 <tr>
-                  <th></th>
+                  <th>Ícono</th>
                   <th>Nombre</th>
                   <th>Categoría</th>
                   <th>Precio</th>
-                  <th></th>
+                  <th>Acciones</th>
                 </tr>
               </thead>
               <tbody data-product-table></tbody>
@@ -135,8 +158,347 @@
 </div>
 
 <script defer src="lib/manifest.js"></script>
-<script defer src="lib/products-data.js"></script>
-<script defer src="main.js?v=20260812"></script>
-<script defer src="admin.js?v=20260812"></script>
+<script>
+// admin.js integrado con funcionalidad de categorías
+document.addEventListener('DOMContentLoaded', function() {
+    // CONSTANTES Y ESTADO
+    const ADMIN_PASSWORD = 'ferreteria2026';
+    const STORAGE_KEY = 'ferreteria_santana_products';
+    const CATEGORY_COLORS = {
+        'ELECTRICOS': '#f59e0b',
+        'PLOMERIA': '#3b82f6',
+        'PINTURA': '#8b5cf6',
+        'HERRAMIENTA': '#ef4444',
+        'JARDINERIA': '#22c55e',
+        'CERRAJERIA': '#f97316',
+        'SEGURIDAD': '#6366f1',
+        'ILUMINACION': '#0ea5e9',
+        'FERRETERIA': '#6b7280'
+    };
+    
+    let products = [];
+    let editingId = null;
+    let selectedCategory = 'TODOS';
+
+    // DOM REFS
+    const lockGate = document.querySelector('[data-admin-lock]');
+    const app = document.querySelector('[data-admin-app]');
+    const loginForm = document.querySelector('[data-admin-login]');
+    const logoutBtn = document.querySelector('[data-admin-logout]');
+    const errorMsg = document.querySelector('[data-admin-error]');
+    const form = document.querySelector('[data-product-form]');
+    const formTitle = document.querySelector('[data-form-title]');
+    const submitLabel = document.querySelector('[data-submit-label]');
+    const cancelBtn = document.querySelector('[data-cancel-edit]');
+    const tableBody = document.querySelector('[data-product-table]');
+    const productCount = document.querySelector('[data-product-count]');
+    const searchInput = document.querySelector('[data-admin-search]');
+    const chipsContainer = document.querySelector('[data-admin-chips]');
+    const exportBtn = document.querySelector('[data-export-btn]');
+    const exportStatus = document.querySelector('[data-export-status]');
+    const resetBtn = document.querySelector('[data-reset-btn]');
+
+    // FUNCIONES PRINCIPALES
+    function loadProducts() {
+        try {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            if (stored) {
+                products = JSON.parse(stored);
+                return;
+            }
+        } catch (e) {
+            console.warn('Error al cargar productos del localStorage');
+        }
+        
+        // Cargar desde products-data.js si existe
+        if (typeof window.productsData !== 'undefined' && Array.isArray(window.productsData)) {
+            products = JSON.parse(JSON.stringify(window.productsData));
+        } else {
+            // Productos por defecto
+            products = [
+                { id: 1, name: 'Taladro percutor', category: 'HERRAMIENTA', price: '850.00', unit: 'pieza', desc: 'Taladro eléctrico de 600W', icon: '🔧' },
+                { id: 2, name: 'Cinta métrica 5m', category: 'HERRAMIENTA', price: '120.00', unit: 'pieza', desc: 'Cinta métrica de fibra de vidrio', icon: '📏' },
+                { id: 3, name: 'Tubería PVC 1/2"', category: 'PLOMERIA', price: '45.00', unit: 'tramo 3m', desc: 'Tubería de PVC para instalaciones', icon: '🔌' },
+                { id: 4, name: 'Pintura vinílica blanca', category: 'PINTURA', price: '280.00', unit: 'galón', desc: 'Pintura de interior', icon: '🎨' },
+                { id: 5, name: 'Foco LED 9W', category: 'ILUMINACION', price: '65.00', unit: 'pieza', desc: 'Foco LED eficiente', icon: '💡' }
+            ];
+        }
+        saveProducts();
+    }
+
+    function saveProducts() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
+        renderProducts();
+        updateCategories();
+    }
+
+    function getCategoryColor(category) {
+        return CATEGORY_COLORS[category] || '#6b7280';
+    }
+
+    function renderProducts() {
+        const searchTerm = searchInput.value.toLowerCase().trim();
+        const filtered = products.filter(p => {
+            const matchesSearch = p.name.toLowerCase().includes(searchTerm) || 
+                                  p.desc?.toLowerCase().includes(searchTerm) ||
+                                  p.category?.toLowerCase().includes(searchTerm);
+            const matchesCategory = selectedCategory === 'TODOS' || p.category === selectedCategory;
+            return matchesSearch && matchesCategory;
+        });
+
+        if (filtered.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:2rem;color:#6b7280;">No hay productos que coincidan</td></tr>`;
+            productCount.textContent = products.length;
+            return;
+        }
+
+        let html = '';
+        filtered.forEach(product => {
+            const iconHtml = product.icon || '📦';
+            const categoryColor = getCategoryColor(product.category);
+            html += `
+                <tr>
+                    <td style="font-size:1.3rem;">${iconHtml}</td>
+                    <td><strong>${product.name}</strong></td>
+                    <td>
+                        <span style="background:${categoryColor};color:white;padding:0.2rem 0.7rem;border-radius:20px;font-size:0.7rem;font-weight:600;">
+                            ${product.category || 'General'}
+                        </span>
+                    </td>
+                    <td>${product.price ? '$' + product.price : '—'}</td>
+                    <td>
+                        <button class="btn btn-sm btn-ghost" data-edit-id="${product.id}">✏️</button>
+                        <button class="btn btn-sm btn-ghost" data-delete-id="${product.id}" style="color:#ef4444;">🗑️</button>
+                    </td>
+                </tr>
+            `;
+        });
+        tableBody.innerHTML = html;
+        productCount.textContent = products.length;
+
+        // Event listeners para botones
+        document.querySelectorAll('[data-edit-id]').forEach(btn => {
+            btn.addEventListener('click', () => editProduct(parseInt(btn.dataset.editId)));
+        });
+        document.querySelectorAll('[data-delete-id]').forEach(btn => {
+            btn.addEventListener('click', () => deleteProduct(parseInt(btn.dataset.deleteId)));
+        });
+    }
+
+    function updateCategories() {
+        // Obtener categorías únicas
+        const categories = ['TODOS', ...new Set(products.map(p => p.category).filter(Boolean))];
+        let chipsHtml = '';
+        categories.forEach(cat => {
+            const active = cat === selectedCategory ? 'active' : '';
+            const displayName = cat === 'TODOS' ? 'Todos' : cat;
+            chipsHtml += `<button class="chip ${active}" data-category="${cat}">${displayName}</button>`;
+        });
+        chipsContainer.innerHTML = chipsHtml;
+
+        // Event listeners para chips
+        document.querySelectorAll('[data-category]').forEach(chip => {
+            chip.addEventListener('click', () => {
+                selectedCategory = chip.dataset.category;
+                renderProducts();
+                updateCategories();
+            });
+        });
+    }
+
+    function handleFormSubmit(e) {
+        e.preventDefault();
+        const formData = new FormData(form);
+        const product = {
+            name: formData.get('name').trim(),
+            category: formData.get('category'),
+            icon: formData.get('icon') || '',
+            price: formData.get('price').trim(),
+            unit: formData.get('unit').trim(),
+            desc: formData.get('desc').trim()
+        };
+
+        if (!product.name) {
+            alert('El nombre del producto es obligatorio');
+            return;
+        }
+        if (!product.category) {
+            alert('Por favor selecciona una categoría');
+            return;
+        }
+
+        const idField = form.querySelector('[data-field="id"]');
+        if (editingId) {
+            // Editar producto existente
+            const index = products.findIndex(p => p.id === editingId);
+            if (index !== -1) {
+                products[index] = { ...products[index], ...product };
+            }
+            editingId = null;
+            formTitle.textContent = 'Agregar producto';
+            submitLabel.textContent = 'Agregar producto';
+            cancelBtn.style.display = 'none';
+        } else {
+            // Nuevo producto
+            const maxId = products.reduce((max, p) => Math.max(max, p.id), 0);
+            product.id = maxId + 1;
+            products.push(product);
+        }
+        form.reset();
+        document.getElementById('f-category').value = '';
+        saveProducts();
+        renderProducts();
+        updateCategories();
+    }
+
+    function editProduct(id) {
+        const product = products.find(p => p.id === id);
+        if (!product) return;
+        editingId = id;
+        form.querySelector('[data-field="id"]').value = id;
+        document.getElementById('f-name').value = product.name || '';
+        document.getElementById('f-category').value = product.category || '';
+        document.getElementById('f-icon').value = product.icon || '';
+        document.getElementById('f-price').value = product.price || '';
+        document.getElementById('f-unit').value = product.unit || '';
+        document.getElementById('f-desc').value = product.desc || '';
+        formTitle.textContent = 'Editar producto';
+        submitLabel.textContent = 'Actualizar';
+        cancelBtn.style.display = 'inline-block';
+    }
+
+    function deleteProduct(id) {
+        if (!confirm('¿Seguro que quieres eliminar este producto?')) return;
+        products = products.filter(p => p.id !== id);
+        if (editingId === id) {
+            editingId = null;
+            formTitle.textContent = 'Agregar producto';
+            submitLabel.textContent = 'Agregar producto';
+            cancelBtn.style.display = 'none';
+            form.reset();
+            document.getElementById('f-category').value = '';
+        }
+        saveProducts();
+        renderProducts();
+        updateCategories();
+    }
+
+    function exportData() {
+        try {
+            const json = JSON.stringify(products, null, 2);
+            const content = `// products-data.js - Actualizado automáticamente\nconst productsData = ${json};\n\n// Para usar en la tienda\nexport default productsData;`;
+            const blob = new Blob([content], { type: 'application/javascript' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `products-data-${new Date().toISOString().slice(0,10)}.js`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            exportStatus.textContent = '✅ Archivo descargado correctamente';
+            exportStatus.style.color = '#22c55e';
+        } catch (e) {
+            exportStatus.textContent = '❌ Error al exportar';
+            exportStatus.style.color = '#ef4444';
+            console.error(e);
+        }
+    }
+
+    function resetCatalog() {
+        if (!confirm('⚠️ ¿Restablecer el catálogo a los productos originales? Esta acción no se puede deshacer.')) return;
+        if (typeof window.productsData !== 'undefined' && Array.isArray(window.productsData)) {
+            products = JSON.parse(JSON.stringify(window.productsData));
+        } else {
+            products = [
+                { id: 1, name: 'Taladro percutor', category: 'HERRAMIENTA', price: '850.00', unit: 'pieza', desc: 'Taladro eléctrico de 600W', icon: '🔧' },
+                { id: 2, name: 'Cinta métrica 5m', category: 'HERRAMIENTA', price: '120.00', unit: 'pieza', desc: 'Cinta métrica de fibra de vidrio', icon: '📏' },
+                { id: 3, name: 'Tubería PVC 1/2"', category: 'PLOMERIA', price: '45.00', unit: 'tramo 3m', desc: 'Tubería de PVC para instalaciones', icon: '🔌' },
+                { id: 4, name: 'Pintura vinílica blanca', category: 'PINTURA', price: '280.00', unit: 'galón', desc: 'Pintura de interior', icon: '🎨' },
+                { id: 5, name: 'Foco LED 9W', category: 'ILUMINACION', price: '65.00', unit: 'pieza', desc: 'Foco LED eficiente', icon: '💡' }
+            ];
+        }
+        saveProducts();
+        renderProducts();
+        updateCategories();
+        exportStatus.textContent = '✅ Catálogo restablecido';
+        exportStatus.style.color = '#22c55e';
+    }
+
+    // LOGIN Y AUTENTICACIÓN
+    function unlockApp() {
+        lockGate.style.display = 'none';
+        app.style.display = 'block';
+        document.body.style.overflow = 'auto';
+        loadProducts();
+    }
+
+    loginForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const input = document.getElementById('admin-pass');
+        if (input.value === ADMIN_PASSWORD) {
+            unlockApp();
+            errorMsg.textContent = '';
+            input.value = '';
+        } else {
+            errorMsg.textContent = '❌ Contraseña incorrecta. Intenta de nuevo.';
+            input.value = '';
+            input.focus();
+        }
+    });
+
+    logoutBtn.addEventListener('click', () => {
+        if (confirm('¿Salir del panel?')) {
+            lockGate.style.display = 'flex';
+            app.style.display = 'none';
+            document.getElementById('admin-pass').value = '';
+            errorMsg.textContent = '';
+            document.body.style.overflow = 'hidden';
+        }
+    });
+
+    // EVENT LISTENERS
+    form.addEventListener('submit', handleFormSubmit);
+
+    cancelBtn.addEventListener('click', () => {
+        editingId = null;
+        formTitle.textContent = 'Agregar producto';
+        submitLabel.textContent = 'Agregar producto';
+        cancelBtn.style.display = 'none';
+        form.reset();
+        document.getElementById('f-category').value = '';
+    });
+
+    searchInput.addEventListener('input', renderProducts);
+    exportBtn.addEventListener('click', exportData);
+    resetBtn.addEventListener('click', resetCatalog);
+
+    // Keyboard shortcut para salir (Ctrl+Shift+L)
+    document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.shiftKey && e.key === 'L') {
+            logoutBtn.click();
+        }
+    });
+
+    // INICIALIZAR
+    // Verificar si ya hay sesión activa (opcional)
+    // Por defecto mostrar login
+    lockGate.style.display = 'flex';
+    app.style.display = 'none';
+    document.body.style.overflow = 'hidden';
+});
+</script>
+<!-- Cargar products-data.js si existe -->
+<script>
+// Definición de productsData para usar en el panel
+window.productsData = [
+    { id: 1, name: 'Taladro percutor', category: 'HERRAMIENTA', price: '850.00', unit: 'pieza', desc: 'Taladro eléctrico de 600W', icon: '🔧' },
+    { id: 2, name: 'Cinta métrica 5m', category: 'HERRAMIENTA', price: '120.00', unit: 'pieza', desc: 'Cinta métrica de fibra de vidrio', icon: '📏' },
+    { id: 3, name: 'Tubería PVC 1/2"', category: 'PLOMERIA', price: '45.00', unit: 'tramo 3m', desc: 'Tubería de PVC para instalaciones', icon: '🔌' },
+    { id: 4, name: 'Pintura vinílica blanca', category: 'PINTURA', price: '280.00', unit: 'galón', desc: 'Pintura de interior', icon: '🎨' },
+    { id: 5, name: 'Foco LED 9W', category: 'ILUMINACION', price: '65.00', unit: 'pieza', desc: 'Foco LED eficiente', icon: '💡' },
+    { id: 6, name: 'Candado de seguridad', category: 'SEGURIDAD', price: '120.00', unit: 'pieza', desc: 'Candado de acero de 60mm', icon: '🔒' }
+];
+</script>
 </body>
 </html>
