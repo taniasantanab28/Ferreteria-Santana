@@ -63,8 +63,21 @@
     return base;
   }
 
+  var CATEGORY_STORAGE_KEY = "santana_categories_v1";
+
+  function getCategories() {
+    try {
+      var raw = window.localStorage.getItem(CATEGORY_STORAGE_KEY);
+      if (raw) {
+        var stored = JSON.parse(raw);
+        if (Array.isArray(stored)) return stored;
+      }
+    } catch (e) { /* localStorage unavailable */ }
+    return (data.categories || []).slice();
+  }
+
   function categoryName(id) {
-    var cats = data.categories || [];
+    var cats = getCategories();
     for (var i = 0; i < cats.length; i++) if (cats[i].id === id) return cats[i].name;
     return id;
   }
@@ -95,8 +108,10 @@
 
   function mountCategories() {
     var target = $("[data-categories]");
-    if (!target || target.children.length > 0 || !data.categories) return;
-    target.innerHTML = data.categories.map(function (c) {
+    if (!target || target.children.length > 0) return;
+    var cats = getCategories();
+    if (!cats.length) return;
+    target.innerHTML = cats.map(function (c) {
       return (
         '<article class="cat-card reveal">' +
           '<div class="ico-wrap">' + icon(c.icon) + "</div>" +
@@ -184,9 +199,11 @@
 
   function mountShopChips() {
     var target = $("[data-shop-chips]");
-    if (!target || target.children.length > 0 || !data.categories) return;
+    if (!target || target.children.length > 0) return;
+    var cats = getCategories();
+    if (!cats.length) return;
     var html = '<button class="chip is-active" data-chip="all" type="button">Todos</button>';
-    html += data.categories.map(function (c) {
+    html += cats.map(function (c) {
       return '<button class="chip" data-chip="' + escHTML(c.id) + '" type="button">' + escHTML(c.name) + "</button>";
     }).join("");
     target.innerHTML = html;
@@ -467,5 +484,5 @@
   }
 
   // Expose a couple of helpers for admin.js to reuse
-  window.__SITE__ = { icon: icon, escHTML: escHTML, getProducts: getProducts, productCardHTML: productCardHTML, categoryName: categoryName };
+  window.__SITE__ = { icon: icon, escHTML: escHTML, getProducts: getProducts, productCardHTML: productCardHTML, categoryName: categoryName, getCategories: getCategories };
 })();
